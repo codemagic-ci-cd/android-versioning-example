@@ -1,5 +1,15 @@
 apply plugin: 'com.android.application'
 
+// get version code from the specified property argument `-PversionCode` during the build call
+def getMyVersionCode = { ->
+    return project.hasProperty('versionCode') ? versionCode.toInteger() : -1
+}
+
+// get version name from the specified property argument `-PversionName` during the build call
+def getMyVersionName = { ->
+    return project.hasProperty('versionName') ? versionName : "1.0"
+}
+
 android {
     compileSdkVersion 29
     buildToolsVersion "29.0.2"
@@ -7,14 +17,28 @@ android {
         applicationId "io.codemagic.androidhelloworldapp"
         minSdkVersion 16
         targetSdkVersion 29
-        versionCode 1
-        versionName "1.0"
+        versionCode getMyVersionCode()
+        versionName getMyVersionName()
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+    signingConfigs {
+        release {
+            if (System.getenv()["CI"]) { // CI=true is exported by Codemagic. An alternative would be to use "CODEMAGIC" env var
+                storeFile file(System.getenv()["KEYSTORE_PATH"])
+                storePassword System.getenv()["KEYSTORE_PASSWORD"]
+                keyAlias System.getenv()["KEY_ALIAS"]
+                keyPassword System.getenv()["KEY_PASSWORD"]
+            } else {
+                storeFile file("/path/to/local/myreleasekey.keystore")
+                storePassword "password"
+                keyAlias "MyReleaseKey"
+                keyPassword "password"
+            }
+        }
     }
     buildTypes {
         release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
         }
     }
 }
