@@ -1,20 +1,39 @@
 apply plugin: 'com.android.application'
 
 android {
+    def packageName = "io.codemagic.androidhelloworldapp"
+    def latestGooglePlayBuildNumber = "google-play get-latest-build-number --package-name $packageName".execute().text
+    def updatedBuildNumber = latestGooglePlayBuildNumber.toInteger() + 1 // will fail the build if latestGooglePlayBuildNumber is not found
+    println("Building with version code $updatedBuildNumber")
+
     compileSdkVersion 29
     buildToolsVersion "29.0.2"
     defaultConfig {
-        applicationId "io.codemagic.androidhelloworldapp"
+        applicationId packageName
         minSdkVersion 16
         targetSdkVersion 29
-        versionCode 1
-        versionName "1.0"
+        versionCode updatedBuildNumber
+        versionName "1.0" + updatedBuildNumber.toString()
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+    signingConfigs {
+        release {
+            if (System.getenv()["CI"]) { // CI=true is exported by Codemagic. An alternative would be to use "CODEMAGIC" env var
+                storeFile file(System.getenv()["KEYSTORE_PATH"])
+                storePassword System.getenv()["KEYSTORE_PASSWORD"]
+                keyAlias System.getenv()["KEY_ALIAS"]
+                keyPassword System.getenv()["KEY_PASSWORD"]
+            } else {
+                storeFile file("/path/to/local/myreleasekey.keystore")
+                storePassword "password"
+                keyAlias "MyReleaseKey"
+                keyPassword "password"
+            }
+        }
     }
     buildTypes {
         release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
         }
     }
 }
